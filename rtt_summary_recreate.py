@@ -23,7 +23,7 @@ token = generateToken()
 
 
 rtt_summary_idxs = {
-        'address_high_ind': {'fields': ['address_high'], 'unique': 'fales'},
+        'address_high_ind': {'fields': ['address_high'], 'unique': 'false'},
         'address_low_frac': {'fields': ['address_low_frac'], 'unique': 'false'},
         'address_low_inde': {'fields': ['address_low'], 'unique': 'false'},
         'address_low_suff': {'fields': ['address_low_suffix'], 'unique': 'false'},
@@ -35,7 +35,7 @@ rtt_summary_idxs = {
         'comp5_idx': {'fields': ['address_low','address_low_frac','street_predir','street_name','street_suffix'], 'unique': 'false'},
         'comp6_idx': {'fields': ['address_low','address_low_suffix','address_high','street_predir','street_name','street_suffix'], 'unique': 'false'},
         'comp7_idx': {'fields': ['address_low','address_low_suffix','street_predir','street_name','street_suffix'], 'unique': 'false'},
-        'comp8_idx': {'fields': ['address_low','address_low_suffix','street_name','street_sufix'], 'unique': 'false'},
+        'comp8_idx': {'fields': ['address_low','address_low_suffix','street_name','street_suffix'], 'unique': 'false'},
         'comp9_idx': {'fields': ['address_low','address_high','street_name','street_suffix','street_predir'], 'unique': 'false'},
         'comp_idx': {'fields': ['address_low','address_low_suffix','address_low_frac','address_high','street_predir','street_name','street_suffix'], 'unique': 'false'},
         'docid_idx': {'fields': ['document_id'], 'unique': 'false'},
@@ -59,6 +59,7 @@ rtt_summary_idxs = {
 
 
 for key,value in rtt_summary_idxs.items():
+    print('\n')
 
     fields = ','.join(rtt_summary_idxs[key]['fields'])
 
@@ -81,10 +82,10 @@ for key,value in rtt_summary_idxs.items():
 
     print("Posting the index...")
     headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
-    r = requests.post(f'{url}?token={token}', data = {'f': 'json', 'addToDefinition': jsonData }, headers=headers)
+    r = requests.post(f'{url}?token={token}', data = {'f': 'json', 'addToDefinition': jsonData }, headers=headers, timeout=360)
 
     print(r)
-    print(r.status_code)
+    #print(r.status_code)
     print(r.text)
     sleep(2)
 
