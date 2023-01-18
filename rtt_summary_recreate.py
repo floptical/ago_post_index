@@ -1,9 +1,27 @@
+import os, sys
 import requests
 import json
 from time import sleep
+from get_aws_secret import get_secret
+import configparser
 
-ago_user = 'user'
-ago_pw = 'password'
+
+# Read from our global config file that should be one directory above.
+if os.path.isfile('../aws-api-keys.ini'):
+    config = configparser.ConfigParser()
+    config.read('../aws-api-keys.ini')
+
+    aws_access_key_id = config['AWS']['aws_access_key_id']
+    aws_secret_access_key = config['AWS']['aws_secret_access_key']
+    os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key_id
+    os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_access_key
+
+
+maps_secrets = get_secret('AGO/maps.phl.data')
+print(maps_secrets)
+ago_user = 'maps.phl.data'
+ago_pw = maps_secrets['password']
+
 
 def generateToken():
     """
