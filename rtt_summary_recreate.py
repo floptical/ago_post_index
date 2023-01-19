@@ -6,6 +6,12 @@ from get_aws_secret import get_secret
 import configparser
 
 
+# Change to our script dir for the relative file path below
+script_directory = os.path.dirname(os.path.realpath(__file__))
+pid = os.getpid()
+os.chdir(script_directory)
+
+
 # Read from our global config file that should be one directory above.
 if os.path.isfile('../aws-api-keys.ini'):
     config = configparser.ConfigParser()
