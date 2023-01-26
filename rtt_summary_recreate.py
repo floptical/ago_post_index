@@ -5,12 +5,10 @@ from time import sleep
 from get_aws_secret import get_secret
 import configparser
 
-
 # Change to our script dir for the relative file path below
 script_directory = os.path.dirname(os.path.realpath(__file__))
 pid = os.getpid()
 os.chdir(script_directory)
-
 
 # Read from our global config file that should be one directory above.
 if os.path.isfile('../aws-api-keys.ini'):
@@ -24,7 +22,6 @@ if os.path.isfile('../aws-api-keys.ini'):
 
 
 maps_secrets = get_secret('AGO/maps.phl.data')
-print(maps_secrets)
 ago_user = 'maps.phl.data'
 ago_pw = maps_secrets['password']
 
@@ -44,7 +41,6 @@ def generateToken():
 
 print("Generating token..")
 token = generateToken()
-
 
 rtt_summary_idxs = {
         'address_high_ind': {'fields': ['address_high'], 'unique': 'false'},
@@ -99,18 +95,21 @@ for key,value in rtt_summary_idxs.items():
      ]
     }
     jsonData = json.dumps(index_json)
-    print(jsonData)
 
     # This endpoint is publicly viewable on AGO while not logged in.
     url = 'https://services.arcgis.com/fLeGjb7u4uXqeF9q/arcgis/rest/admin/services/RTT_SUMMARY/FeatureServer/0/addToDefinition'
 
-    print("Posting the index...")
+    print(f"Posting the index for '{key}'..")
     headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
     r = requests.post(f'{url}?token={token}', data = {'f': 'json', 'addToDefinition': jsonData }, headers=headers, timeout=360)
 
-    print(r)
-    #print(r.status_code)
-    print(r.text)
+    if 'Invalid definition' in r.text:
+        print('''
+        Index appears to already be set, got "Invalid Definition" error (this is usually a good thing, but still
+        possible your index was actually rejected. ESRI just doesnt code in proper errors).
+        ''')
+    else:
+        print(r.text)
     sleep(2)
 
 # Delete from definition?
