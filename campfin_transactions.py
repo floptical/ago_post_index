@@ -5,6 +5,7 @@ from time import sleep
 from get_aws_secret import get_secret
 import configparser
 
+
 # Change to our script dir for the relative file path below
 script_directory = os.path.dirname(os.path.realpath(__file__))
 pid = os.getpid()
@@ -72,7 +73,10 @@ campfin_transactions_idx = ['transaction_date',
                             'entity_city',
                             'entity_state',
                             'entity_zip',
-                            'report_cycle_code']
+                            'report_cycle_code',
+                            'report_cycle_name',
+                            'est_trans_count',
+                            'transaction_supertype']
 
 
 for field in campfin_transactions_idx:
