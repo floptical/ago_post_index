@@ -5,6 +5,9 @@ from time import sleep
 from get_aws_secret import get_secret
 import configparser
 
+os.environ["HTTP_PROXY"] = 'http://proxy.phila.gov:8080'
+os.environ["HTTPS_PROXY"] = 'http://proxy.phila.gov:8080'
+
 # Change to our script dir for the relative file path below
 script_directory = os.path.dirname(os.path.realpath(__file__))
 pid = os.getpid()
@@ -77,18 +80,17 @@ rtt_summary_idxs = {
         'zipcode_idx': {'fields': ['zip_code'], 'unique': 'false'}
         }
 
-
-for key,value in rtt_summary_idxs.items():
+def post_index(index_name):
     print('\n')
 
-    fields = ','.join(rtt_summary_idxs[key]['fields'])
+    fields = ','.join(rtt_summary_idxs[index_name]['fields'])
 
     index_json = {
       "indexes": [
       {
-        "name": key,
+        "name": index_name,
         "fields": fields,
-        "isUnique": rtt_summary_idxs[key]['unique'],
+        "isUnique": rtt_summary_idxs[index_name]['unique'],
         "isAscending": 'true',
         "description": ""
       }
@@ -101,16 +103,73 @@ for key,value in rtt_summary_idxs.items():
 
     print(f"Posting the index for '{key}'..")
     headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
-    r = requests.post(f'{url}?token={token}', data = {'f': 'json', 'addToDefinition': jsonData }, headers=headers, timeout=360)
+    r = requests.post(f'{url}?token={token}', data = {'f': 'json', 'addToDefinition': jsonData }, headers=headers, timeout=3600)
 
     if 'Invalid definition' in r.text:
         print('''
         Index appears to already be set, got "Invalid Definition" error (this is usually a good thing, but still
         possible your index was actually rejected. ESRI just doesnt code in proper errors).
         ''')
+    # Seen this error before that prevents an index from being added. Sleep and try to add again.
+    elif 'Operation failed. The index entry of length' in r.text:
+        print('Got an error, retrying in 6 minutes...')
+        sleep(360)
+        print(f'Error was: {r.text}')
+        print(f"Posting the index for '{key}'..")
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        r = requests.post(f'{url}?token={token}', data={'f': 'json', 'addToDefinition': jsonData}, headers=headers,
+                          timeout=3600)
+        if 'success' not in r.text:
+            print('Retry on this index failed. Returned AGO error:')
+            print(r.text)
+    # Retry once on timeout.
+    elif 'Your request has timed out' in r.text:
+        print('Got an error, retrying in 6 minutes...')
+        sleep(360)
+        print(f'Error was: {r.text}')
+        print(f"Posting the index for '{key}'..")
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        r = requests.post(f'{url}?token={token}', data={'f': 'json', 'addToDefinition': jsonData}, headers=headers,
+                          timeout=3600)
+        if 'success' not in r.text:
+            print('Retry on this index failed. Returned AGO error:')
+            print(r.text)
     else:
         print(r.text)
-    sleep(2)
+    # Sleep for a bit so we don't hammer AGO while it's making massive indexes
+    sleep(10)
+
+
+for key,value in rtt_summary_idxs.items():
+    post_index(key)
+
+# Sleep a bit because AGO will be working in the background to make these indexes
+sleep(300)
+
+# Check what indexes are on the table
+# Note: this endpoint lies. So if we don't see an index, only try to recreate it once.
+check_url = 'https://services.arcgis.com/fLeGjb7u4uXqeF9q/ArcGIS/rest/services/RTT_SUMMARY/FeatureServer/0?f=pjson'
+headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+r = requests.get(f'{check_url}&token={token}', headers=headers, timeout=3600)
+data = r.json()
+# Pull indexes out of the fuater server json definition
+ago_indexes = data['indexes']
+# Get just the names of the indexes
+ago_indexes_list = [ x['name'] for x in ago_indexes ]
+# Get just the names of the indexes in our own index dictionary
+indexes = [ k for k,v in rtt_summary_idxs.items()]
+#print(indexes)
+
+# Subtract to see what is supposedly missing from AGO
+missing_indexes = set(indexes) - set(ago_indexes_list)
+
+if missing_indexes:
+    print('It appears that not all indexes were added, although often AGO just doesnt accurately list installed indexes in the feature server definition. We will retry adding them anyway.')
+    print(f'Missing indexes: {missing_indexes}')
+for index_name in missing_indexes:
+    post_index(rtt_summary_idxs[index_name])
+
+
 
 # Delete from definition?
 #sleep(5)
