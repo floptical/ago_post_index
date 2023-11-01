@@ -150,10 +150,26 @@ sleep(300)
 # Note: this endpoint lies. So if we don't see an index, only try to recreate it once.
 check_url = 'https://services.arcgis.com/fLeGjb7u4uXqeF9q/ArcGIS/rest/services/RTT_SUMMARY/FeatureServer/0?f=pjson'
 headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-r = requests.get(f'{check_url}&token={token}', headers=headers, timeout=3600)
-data = r.json()
-# Pull indexes out of the fuater server json definition
-ago_indexes = data['indexes']
+
+# Pull indexes out of the feature server json definition
+# AGO will sometimes not return what we want, so retry a few times.
+retries = 0
+ago_indexes = None
+while True:
+	retries += 1
+	if retries >= 5:
+		break
+	try:
+		r = requests.get(f'{check_url}&token={token}', headers=headers, timeout=3600)
+		sleep(5)
+		data = r.json()
+		ago_indexes = data['indexes']
+	except KeyError:
+		sleep(1)
+
+if not ago_indexes:
+	print('AGO is refusing to tell us the indexes, its probably still working.')
+	sys.exit(0)
 # Get just the names of the indexes
 ago_indexes_list = [ x['name'] for x in ago_indexes ]
 # Get just the names of the indexes in our own index dictionary
