@@ -170,6 +170,7 @@ while True:
 if not ago_indexes:
 	print('AGO is refusing to tell us the indexes, its probably still working.')
 	sys.exit(0)
+
 # Get just the names of the indexes
 ago_indexes_list = [ x['name'] for x in ago_indexes ]
 # Get just the names of the indexes in our own index dictionary
